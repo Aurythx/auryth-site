@@ -5,27 +5,74 @@
   <title>Auryth — Crows Wake</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      margin: 0;
-      background: black;
+      background: #060a0f;
       color: white;
       font-family: Arial, sans-serif;
       text-align: center;
+      overflow: hidden;
+    }
+    #storm-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+    #flash {
+      position: fixed;
+      inset: 0;
+      background: rgba(180, 210, 255, 1);
+      opacity: 0;
+      z-index: 1;
+      pointer-events: none;
+      transition: opacity 0.05s;
+    }
+    .clouds {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 40%;
+      z-index: 2;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .cloud {
+      position: absolute;
+      opacity: 0.85;
+    }
+    .cloud:nth-child(1) { top: -4%; left: -10%; width: 60%; animation: drift 28s ease-in-out infinite; }
+    .cloud:nth-child(2) { top: 3%; left: 38%; width: 52%; animation: drift 38s ease-in-out -8s infinite; opacity: 0.7; }
+    .cloud:nth-child(3) { top: -2%; left: 68%; width: 48%; animation: drift 22s ease-in-out -4s infinite; }
+    .cloud:nth-child(4) { top: 14%; left: -8%; width: 42%; animation: drift 45s ease-in-out -14s infinite; opacity: 0.6; }
+    .cloud:nth-child(5) { top: 9%; left: 52%; width: 38%; animation: drift 32s ease-in-out -6s infinite; opacity: 0.65; }
+    @keyframes drift {
+      0%   { transform: translateX(0); }
+      50%  { transform: translateX(40px); }
+      100% { transform: translateX(0); }
+    }
+    #lightning-svg {
+      position: fixed;
+      inset: 0;
+      width: 100%; height: 100%;
+      z-index: 3;
+      pointer-events: none;
     }
     .hero {
+      position: relative;
+      z-index: 4;
       height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      background: radial-gradient(circle at center, #111, #000);
+      align-items: center;
     }
     h1 {
       font-size: 3rem;
       letter-spacing: 2px;
+      text-shadow: 0 0 40px rgba(100,160,255,0.5);
     }
-    p {
-      opacity: 0.7;
-    }
+    p { opacity: 0.7; margin-top: 10px; }
     .btn {
       margin-top: 20px;
       padding: 12px 24px;
@@ -33,18 +80,128 @@
       background: transparent;
       color: white;
       cursor: pointer;
+      font-size: 1rem;
     }
-    .btn:hover {
-      background: white;
-      color: black;
-    }
+    .btn:hover { background: white; color: black; }
   </style>
 </head>
 <body>
+
+  <!-- Storm layers -->
+  <canvas id="storm-canvas"></canvas>
+  <div id="flash"></div>
+
+  <div class="clouds">
+    <svg class="cloud" viewBox="0 0 400 160"><defs><filter id="b0"><feGaussianBlur stdDeviation="6"/></filter></defs><ellipse cx="200" cy="110" rx="190" ry="55" fill="#1e2535" filter="url(#b0)"/><ellipse cx="140" cy="90" rx="110" ry="65" fill="#232b3e" filter="url(#b0)"/><ellipse cx="260" cy="95" rx="90" ry="55" fill="#1a2030" filter="url(#b0)"/><ellipse cx="200" cy="75" rx="70" ry="50" fill="#2a334a" filter="url(#b0)"/></svg>
+    <svg class="cloud" viewBox="0 0 400 160"><defs><filter id="b1"><feGaussianBlur stdDeviation="6"/></filter></defs><ellipse cx="200" cy="110" rx="190" ry="55" fill="#1e2535" filter="url(#b1)"/><ellipse cx="140" cy="90" rx="110" ry="65" fill="#232b3e" filter="url(#b1)"/><ellipse cx="260" cy="95" rx="90" ry="55" fill="#1a2030" filter="url(#b1)"/><ellipse cx="200" cy="75" rx="70" ry="50" fill="#2a334a" filter="url(#b1)"/></svg>
+    <svg class="cloud" viewBox="0 0 400 160"><defs><filter id="b2"><feGaussianBlur stdDeviation="6"/></filter></defs><ellipse cx="200" cy="110" rx="190" ry="55" fill="#1e2535" filter="url(#b2)"/><ellipse cx="140" cy="90" rx="110" ry="65" fill="#232b3e" filter="url(#b2)"/><ellipse cx="260" cy="95" rx="90" ry="55" fill="#1a2030" filter="url(#b2)"/><ellipse cx="200" cy="75" rx="70" ry="50" fill="#2a334a" filter="url(#b2)"/></svg>
+    <svg class="cloud" viewBox="0 0 400 160"><defs><filter id="b3"><feGaussianBlur stdDeviation="6"/></filter></defs><ellipse cx="200" cy="110" rx="190" ry="55" fill="#1e2535" filter="url(#b3)"/><ellipse cx="140" cy="90" rx="110" ry="65" fill="#232b3e" filter="url(#b3)"/><ellipse cx="260" cy="95" rx="90" ry="55" fill="#1a2030" filter="url(#b3)"/><ellipse cx="200" cy="75" rx="70" ry="50" fill="#2a334a" filter="url(#b3)"/></svg>
+    <svg class="cloud" viewBox="0 0 400 160"><defs><filter id="b4"><feGaussianBlur stdDeviation="6"/></filter></defs><ellipse cx="200" cy="110" rx="190" ry="55" fill="#1e2535" filter="url(#b4)"/><ellipse cx="140" cy="90" rx="110" ry="65" fill="#232b3e" filter="url(#b4)"/><ellipse cx="260" cy="95" rx="90" ry="55" fill="#1a2030" filter="url(#b4)"/><ellipse cx="200" cy="75" rx="70" ry="50" fill="#2a334a" filter="url(#b4)"/></svg>
+  </div>
+
+  <svg id="lightning-svg"></svg>
+
+  <!-- Your page content -->
   <div class="hero">
     <h1>AURYTH</h1>
     <p>Welcome to the Crows Wake</p>
     <button class="btn">Enter</button>
   </div>
+
+  <script>
+    // ── Rain ──────────────────────────────────────────────
+    const canvas = document.getElementById('storm-canvas');
+    const ctx = canvas.getContext('2d');
+    const drops = [];
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      drops.length = 0;
+      for (let i = 0; i < 220; i++) {
+        drops.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          len: Math.random() * 18 + 10,
+          speed: Math.random() * 10 + 14,
+          opacity: Math.random() * 0.4 + 0.15
+        });
+      }
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function drawRain() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = '#a8c8e8';
+      ctx.lineWidth = 1;
+      for (const d of drops) {
+        ctx.globalAlpha = d.opacity;
+        ctx.beginPath();
+        ctx.moveTo(d.x, d.y);
+        ctx.lineTo(d.x - d.len * 0.2, d.y + d.len);
+        ctx.stroke();
+        d.y += d.speed;
+        d.x -= d.speed * 0.2;
+        if (d.y > canvas.height) { d.y = -d.len; d.x = Math.random() * canvas.width; }
+        if (d.x < 0) d.x = canvas.width;
+      }
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(drawRain);
+    }
+    drawRain();
+
+    // ── Lightning ─────────────────────────────────────────
+    const svg = document.getElementById('lightning-svg');
+    const flash = document.getElementById('flash');
+
+    function generateBolt(startX, endY) {
+      let cx = startX, cy = 0, d = `M ${cx} ${cy}`;
+      while (cy < endY) {
+        const seg = Math.random() * 40 + 20;
+        cx += (Math.random() - 0.5) * 80;
+        cy += Math.min(seg, endY - cy);
+        d += ` L ${cx} ${cy}`;
+      }
+      return d;
+    }
+
+    function strike() {
+      const x = (Math.random() * 80 + 10) / 100 * window.innerWidth;
+      const d = generateBolt(x, window.innerHeight * 0.65);
+      const w = Math.random() * 2 + 1.5;
+
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      for (const [stroke, width] of [
+        ['rgba(150,200,255,0.25)', w * 6],
+        ['rgba(180,220,255,0.6)',  w * 2.5],
+        ['#e8f4ff',                w]
+      ]) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('stroke', stroke);
+        path.setAttribute('stroke-width', width);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+        g.appendChild(path);
+      }
+      svg.appendChild(g);
+
+      flash.style.opacity = 0.18;
+      setTimeout(() => flash.style.opacity = 0.07, 60);
+      setTimeout(() => flash.style.opacity = 0.14, 120);
+      setTimeout(() => flash.style.opacity = 0, 180);
+      setTimeout(() => svg.removeChild(g), 350);
+    }
+
+    function scheduleStrike() {
+      setTimeout(() => {
+        strike();
+        if (Math.random() > 0.5) setTimeout(strike, 150);
+        scheduleStrike();
+      }, Math.random() * 3500 + 1200);
+    }
+    scheduleStrike();
+  </script>
 </body>
 </html>
