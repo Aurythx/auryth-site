@@ -1,7 +1,7 @@
 import ThunderstormBackground from "@/components/ThunderstormBackground";
 
 export default function Home() {
-  return (ThunderstormBackground />
+  return (
     <main style={{ position: "relative", minHeight: "100vh" }}>
       <ThunderstormBackground />
 
