@@ -2,206 +2,639 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Auryth — Crows Wake</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auryth</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
     body {
-      background: #060a0f;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      overflow: hidden;
-    }
-    #storm-canvas {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      z-index: 0;
-      pointer-events: none;
+      width: 100vw; height: 100vh; position: relative; overflow: hidden;
+      background: radial-gradient(ellipse at 50% 0%, #14142a 0%, #0a0a18 55%, #050508 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
     #flash {
-      position: fixed;
-      inset: 0;
-      background: rgba(180, 210, 255, 1);
-      opacity: 0;
-      z-index: 1;
-      pointer-events: none;
-      transition: opacity 0.05s;
+      position: absolute; inset: 0;
+      background: rgba(200,160,255,1);
+      opacity: 0; pointer-events: none; z-index: 20;
+      transition: opacity .05s;
     }
-    .clouds {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 40%;
-      z-index: 2;
-      pointer-events: none;
-      overflow: hidden;
+    #scene-layer   { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+    #tornado-layer { position: absolute; left: 17%; top: 14%; transform: translateX(-50%); pointer-events: none; z-index: 2; }
+    #clouds-layer  { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+    #rain-canvas   { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; display: block; }
+    #lightning-svg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; pointer-events: none; }
+    #splash-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 7; pointer-events: none; display: block; }
+    #ui {
+      position: absolute; inset: 0; z-index: 8;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
     }
-    .cloud {
-      position: absolute;
-      opacity: 0.85;
+    #welcome-text {
+      font-size: clamp(12px, 1.5vw, 16px);
+      letter-spacing: .3em; text-transform: uppercase;
+      color: rgba(160,180,255,.75); margin-bottom: .5rem;
+      font-weight: 400; position: relative; z-index: 3;
     }
-    .cloud:nth-child(1) { top: -4%; left: -10%; width: 60%; animation: drift 28s ease-in-out infinite; }
-    .cloud:nth-child(2) { top: 3%; left: 38%; width: 52%; animation: drift 38s ease-in-out -8s infinite; opacity: 0.7; }
-    .cloud:nth-child(3) { top: -2%; left: 68%; width: 48%; animation: drift 22s ease-in-out -4s infinite; }
-    .cloud:nth-child(4) { top: 14%; left: -8%; width: 42%; animation: drift 45s ease-in-out -14s infinite; opacity: 0.6; }
-    .cloud:nth-child(5) { top: 9%; left: 52%; width: 38%; animation: drift 32s ease-in-out -6s infinite; opacity: 0.65; }
-    @keyframes drift {
-      0%   { transform: translateX(0); }
-      50%  { transform: translateX(40px); }
-      100% { transform: translateX(0); }
+    #title {
+      font-size: clamp(52px, 7.5vw, 108px);
+      font-weight: 700; letter-spacing: -.01em;
+      color: #f0eaff; margin: 0 0 2.8rem; line-height: 1.1;
+      text-shadow: 0 0 80px rgba(160,100,255,.55), 0 0 20px rgba(100,120,255,.4);
+      display: flex; align-items: flex-end;
     }
-    #lightning-svg {
-      position: fixed;
-      inset: 0;
-      width: 100%; height: 100%;
-      z-index: 3;
-      pointer-events: none;
+    .letter-wrap { position: relative; display: inline-block; }
+    .crow-slot {
+      position: absolute; bottom: 100%; left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      pointer-events: none; z-index: 1; display: block;
     }
-    .hero {
-      position: relative;
-      z-index: 4;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+    .crow { overflow: visible; }
+    #enter-btn {
+      padding: 20px 60px;
+      border: 1.5px solid rgba(200,180,255,.6);
+      background: rgba(80,50,120,.15);
+      color: #e8d8ff; cursor: pointer;
+      font-size: clamp(14px, 1.6vw, 20px);
+      letter-spacing: .2em;
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+      transition: background .2s, color .2s;
+      user-select: none; white-space: nowrap;
+      font-family: inherit; outline: none;
     }
-    h1 {
-      font-size: 3rem;
-      letter-spacing: 2px;
-      text-shadow: 0 0 40px rgba(100,160,255,0.5);
+    @keyframes ruffle {
+      0%   { transform: scaleY(1)    scaleX(1); }
+      20%  { transform: scaleY(1.14) scaleX(.93); }
+      40%  { transform: scaleY(.94)  scaleX(1.1); }
+      60%  { transform: scaleY(1.1)  scaleX(.96); }
+      80%  { transform: scaleY(.97)  scaleX(1.05); }
+      100% { transform: scaleY(1)    scaleX(1); }
     }
-    p { opacity: 0.7; margin-top: 10px; }
-    .btn {
-      margin-top: 20px;
-      padding: 12px 24px;
-      border: 1px solid white;
-      background: transparent;
-      color: white;
-      cursor: pointer;
-      font-size: 1rem;
+    @keyframes idleBob0 {
+      0%, 100% { transform: translateY(0px) rotate(-.5deg); }
+      50%      { transform: translateY(-3px) rotate(.5deg); }
     }
-    .btn:hover { background: white; color: black; }
+    @keyframes idleBob1 {
+      0%, 100% { transform: translateY(0px) rotate(.4deg); }
+      50%      { transform: translateY(-4px) rotate(-.4deg); }
+    }
+    @keyframes tornadoSway {
+      0%, 100% { transform: rotate(-2.5deg) skewX(-1deg); }
+      30%      { transform: rotate(1.5deg)  skewX(1deg); }
+      65%      { transform: rotate(-1deg)   skewX(-.5deg); }
+    }
   </style>
 </head>
 <body>
 
-  <!-- Storm layers -->
-  <canvas id="storm-canvas"></canvas>
   <div id="flash"></div>
 
-  <div class="clouds">
-    <svg class="cloud" viewBox="0 0 400 160"><defs><filter id="b0"><feGaussianBlur stdDeviation="6"/></filter></defs><ellipse cx="200" cy="110" rx="190" ry="55" fill="#1e2535" filter="url(#b0)"/><ellipse cx="140" cy="90" rx="110" ry="65" fill="#232b3e" filter="url(#b0)"/><ellipse cx="260" cy="95" rx="90" ry="55" fill="#1a2030" filter="url(#b0)"/><ellipse cx="200" cy="75" rx="70" ry="50" fill="#2a334a" filter="url(#b0)"/></svg>
-    <svg class="cloud" viewBox="0 0 400 160"><defs><filter id="b1"><feGaussianBlur stdDeviation="6"/></filter></defs><ellipse cx="200" cy="110" rx="190" ry="55" fill="#1e2535" filter="url(#b1)"/><ellipse cx="140" cy="90" rx="110" ry="65" fill="#232b3e" filter="url(#b1)"/><ellipse cx="260" cy="95" rx="90" ry="55" fill="#1a2030" filter="url(#b1)"/><ellipse cx="200" cy="75" rx="70" ry="50" fill="#2a334a" filter="url(#b1)"/></svg>
-    <svg class="cloud" viewBox="0 0 400 160"><defs><filter id="b2"><feGaussianBlur stdDeviation="6"/></filter></defs><ellipse cx="200" cy="110" rx="190" ry="55" fill="#1e2535" filter="url(#b2)"/><ellipse cx="140" cy="90" rx="110" ry="65" fill="#232b3e" filter="url(#b2)"/><ellipse cx="260" cy="95" rx="90" ry="55" fill="#1a2030" filter="url(#b2)"/><ellipse cx="200" cy="75" rx="70" ry="50" fill="#2a334a" filter="url(#b2)"/></svg>
-    <svg class="cloud" viewBox="0 0 400 160"><defs><filter id="b3"><feGaussianBlur stdDeviation="6"/></filter></defs><ellipse cx="200" cy="110" rx="190" ry="55" fill="#1e2535" filter="url(#b3)"/><ellipse cx="140" cy="90" rx="110" ry="65" fill="#232b3e" filter="url(#b3)"/><ellipse cx="260" cy="95" rx="90" ry="55" fill="#1a2030" filter="url(#b3)"/><ellipse cx="200" cy="75" rx="70" ry="50" fill="#2a334a" filter="url(#b3)"/></svg>
-    <svg class="cloud" viewBox="0 0 400 160"><defs><filter id="b4"><feGaussianBlur stdDeviation="6"/></filter></defs><ellipse cx="200" cy="110" rx="190" ry="55" fill="#1e2535" filter="url(#b4)"/><ellipse cx="140" cy="90" rx="110" ry="65" fill="#232b3e" filter="url(#b4)"/><ellipse cx="260" cy="95" rx="90" ry="55" fill="#1a2030" filter="url(#b4)"/><ellipse cx="200" cy="75" rx="70" ry="50" fill="#2a334a" filter="url(#b4)"/></svg>
+  <div id="scene-layer">
+    <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"
+         viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="gndGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="#080e08"/>
+          <stop offset="100%" stop-color="#020402"/>
+        </linearGradient>
+        <linearGradient id="mt1Grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="#181e34" stop-opacity=".8"/>
+          <stop offset="100%" stop-color="#0c1020" stop-opacity=".9"/>
+        </linearGradient>
+        <linearGradient id="mt2Grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="#101828" stop-opacity=".92"/>
+          <stop offset="100%" stop-color="#080c14" stop-opacity=".97"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="300" width="1280" height="420" fill="url(#gndGrad)"/>
+      <path d="M-10,310 L70,215 L150,248 L230,186 L320,232 L410,164 L500,208 L590,148 L680,192
+               L770,155 L860,198 L950,158 L1040,205 L1130,165 L1200,202 L1290,172 L1290,315 Z"
+            fill="url(#mt1Grad)"/>
+      <path d="M410,164 L432,178 L454,164 Z M590,148 L612,163 L634,148 Z M770,155 L792,169 L814,155 Z"
+            fill="#1e2840" opacity=".6"/>
+      <path d="M-10,335 L90,268 L180,300 L275,234 L370,278 L460,205 L555,258 L640,218
+               L735,268 L820,228 L910,272 L1000,235 L1090,275 L1175,240 L1270,272 L1290,340 Z"
+            fill="url(#mt2Grad)"/>
+      <rect x="0" y="295" width="1280" height="40" fill="#070b12" opacity=".7"/>
+      <g transform="translate(810,302) scale(0.52)" opacity="0.88">
+        <rect x="-10" y="0" width="160" height="10" rx="1" fill="#181610"/>
+        <rect x="-10" y="10" width="160" height="3" fill="#0e0e0a" opacity=".8"/>
+        <rect x="8"  y="12" width="7" height="38" fill="#141210"/>
+        <rect x="95" y="12" width="7" height="38" fill="#141210"/>
+        <rect x="60" y="-30" width="75" height="55" fill="#131110" rx="1"/>
+        <rect x="65" y="-26" width="65" height="47" fill="#0f0d0b"/>
+        <line x1="72"  y1="-10" x2="76"  y2="4"  stroke="#0a0808" stroke-width="1" opacity=".4"/>
+        <line x1="100" y1="-20" x2="104" y2="-5" stroke="#0a0808" stroke-width="1" opacity=".4"/>
+        <rect x="68" y="-22" width="24" height="16" fill="#0c0a08"/>
+        <line x1="68" y1="-22" x2="92" y2="-6"  stroke="#0e0c0a" stroke-width="2" opacity=".6"/>
+        <line x1="92" y1="-22" x2="68" y2="-6"  stroke="#0e0c0a" stroke-width="2" opacity=".6"/>
+        <rect x="95" y="-22" width="22" height="16" fill="#0c0a08"/>
+        <line x1="95" y1="-22" x2="117" y2="-6" stroke="#0e0c0a" stroke-width="2" opacity=".6"/>
+        <rect x="88" y="-10" width="14" height="22" fill="#0e0c0a"/>
+        <rect x="65" y="-34" width="65" height="8" rx="1" fill="#161410"/>
+        <line x1="80"  y1="-32" x2="80"  y2="-28" stroke="#1a1812" stroke-width="8" opacity=".5"/>
+        <line x1="100" y1="-32" x2="100" y2="-28" stroke="#1a1812" stroke-width="8" opacity=".4"/>
+        <rect x="20" y="18" width="16" height="28" rx="2" fill="#161410"/>
+        <rect x="69" y="18" width="16" height="28" rx="2" fill="#161410"/>
+        <rect x="22" y="22" width="12" height="10" rx="1" fill="#0e0e0c"/>
+        <rect x="71" y="22" width="12" height="10" rx="1" fill="#0e0e0c"/>
+        <path d="M31,30 Q36,34 33,40" stroke="#0a0a08" stroke-width="2" fill="none"/>
+        <path d="M80,30 Q85,34 82,40" stroke="#0a0a08" stroke-width="2" fill="none"/>
+        <rect x="-15" y="50" width="175" height="3" fill="#0a0a08" opacity=".6"/>
+        <rect x="110" y="32" width="32" height="14" rx="2" fill="#0e0c0a"/>
+        <rect x="114" y="26" width="22" height="10" rx="2" fill="#0c0a08"/>
+        <circle cx="116" cy="46" r="5" fill="#0a0808"/>
+        <circle cx="116" cy="46" r="3" fill="#070606"/>
+        <circle cx="136" cy="46" r="5" fill="#0a0808"/>
+        <circle cx="136" cy="46" r="3" fill="#070606"/>
+      </g>
+      <g opacity="0.95">
+        <polygon points="1206,720 1216,568 1226,720" fill="#050c05"/>
+        <line x1="1216" y1="568" x2="1216" y2="720" stroke="#030703" stroke-width="3.5"/>
+        <polygon points="1226,720 1237,586 1248,720" fill="#060d06"/>
+        <line x1="1237" y1="586" x2="1237" y2="720" stroke="#030803" stroke-width="3"/>
+        <polygon points="1248,720 1260,574 1272,720" fill="#050c05"/>
+        <line x1="1260" y1="574" x2="1260" y2="720" stroke="#030703" stroke-width="3.5"/>
+        <polygon points="1268,720 1278,598 1288,720" fill="#070e07"/>
+        <line x1="1278" y1="598" x2="1278" y2="720" stroke="#030803" stroke-width="3"/>
+        <polygon points="1170,720 1182,576 1194,720" fill="#060d06"/>
+        <line x1="1182" y1="576" x2="1182" y2="720" stroke="#030803" stroke-width="3"/>
+        <polygon points="1190,720 1203,590 1216,720" fill="#050c05"/>
+        <line x1="1203" y1="590" x2="1203" y2="720" stroke="#030803" stroke-width="3"/>
+        <ellipse cx="1148" cy="590" rx="42" ry="55" fill="#050d05"/>
+        <ellipse cx="1148" cy="568" rx="32" ry="40" fill="#060e06" opacity=".85"/>
+        <rect x="1144" y="640" width="8" height="50" fill="#030603"/>
+        <ellipse cx="1105" cy="608" rx="36" ry="46" fill="#060d06"/>
+        <ellipse cx="1105" cy="588" rx="26" ry="34" fill="#070e07" opacity=".8"/>
+        <rect x="1101" y="650" width="8" height="40" fill="#030603"/>
+        <polygon points="1080,720 1092,604 1104,720" fill="#060d06"/>
+        <line x1="1092" y1="604" x2="1092" y2="720" stroke="#030803" stroke-width="3"/>
+        <polygon points="1060,720 1073,618 1086,720" fill="#050c05"/>
+        <line x1="1073" y1="618" x2="1073" y2="720" stroke="#030803" stroke-width="2.5"/>
+      </g>
+      <g opacity="0.96">
+        <polygon points="-2,720 10,556 22,720" fill="#060d06"/>
+        <line x1="10" y1="556" x2="10" y2="720" stroke="#030803" stroke-width="3.5"/>
+        <polygon points="14,720 27,570 40,720" fill="#050c05"/>
+        <line x1="27" y1="570" x2="27" y2="720" stroke="#030703" stroke-width="3"/>
+        <polygon points="32,720 45,582 58,720" fill="#060d06"/>
+        <line x1="45" y1="582" x2="45" y2="720" stroke="#030803" stroke-width="3"/>
+        <polygon points="52,720 65,562 78,720" fill="#050c05"/>
+        <line x1="65" y1="562" x2="65" y2="720" stroke="#030703" stroke-width="3.5"/>
+        <ellipse cx="96"  cy="596" rx="44" ry="56" fill="#050d05"/>
+        <ellipse cx="96"  cy="572" rx="33" ry="42" fill="#060e06" opacity=".85"/>
+        <rect x="92"  y="648" width="8" height="50" fill="#030603"/>
+        <ellipse cx="150" cy="614" rx="38" ry="48" fill="#060d06"/>
+        <ellipse cx="150" cy="594" rx="28" ry="36" fill="#070e07" opacity=".8"/>
+        <rect x="146" y="658" width="8" height="42" fill="#030603"/>
+        <polygon points="164,720 177,608 190,720" fill="#060d06"/>
+        <line x1="177" y1="608" x2="177" y2="720" stroke="#030803" stroke-width="3"/>
+        <polygon points="185,720 198,598 211,720" fill="#050c05"/>
+        <line x1="198" y1="598" x2="198" y2="720" stroke="#030703" stroke-width="2.5"/>
+      </g>
+      <g opacity="0.92">
+        <polygon points="225,720 237,612 249,720" fill="#060d06"/>
+        <line x1="237" y1="612" x2="237" y2="720" stroke="#030803" stroke-width="2.5"/>
+        <ellipse cx="268" cy="630" rx="35" ry="44" fill="#050c05"/>
+        <ellipse cx="268" cy="612" rx="25" ry="30" fill="#060d06" opacity=".8"/>
+        <rect x="264" y="670" width="8" height="38" fill="#030603"/>
+      </g>
+      <g opacity="0.9">
+        <ellipse cx="1010" cy="624" rx="37" ry="46" fill="#060d06"/>
+        <ellipse cx="1010" cy="604" rx="27" ry="32" fill="#070e07" opacity=".78"/>
+        <rect x="1006" y="666" width="8" height="40" fill="#030603"/>
+        <polygon points="1032,720 1045,614 1058,720" fill="#050c05"/>
+        <line x1="1045" y1="614" x2="1045" y2="720" stroke="#030803" stroke-width="3"/>
+      </g>
+      <rect x="0" y="290" width="1280" height="30" fill="#0a0e18" opacity=".35"/>
+      <rect x="0" y="310" width="1280" height="20" fill="#080c14" opacity=".2"/>
+    </svg>
   </div>
 
+  <div id="tornado-layer">
+    <svg viewBox="0 0 110 260" width="75" height="178"
+         style="animation:tornadoSway 5s ease-in-out infinite;transform-origin:50% 0%;overflow:visible">
+      <defs>
+        <linearGradient id="tGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="rgba(140,152,185,0.55)"/>
+          <stop offset="40%"  stop-color="rgba(120,132,165,0.40)"/>
+          <stop offset="75%"  stop-color="rgba(100,112,145,0.22)"/>
+          <stop offset="100%" stop-color="rgba(80,90,120,0.05)"/>
+        </linearGradient>
+        <linearGradient id="tInner" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="rgba(60,70,100,0.4)"/>
+          <stop offset="100%" stop-color="rgba(40,50,80,0.0)"/>
+        </linearGradient>
+        <filter id="tBlur"><feGaussianBlur stdDeviation="2.5"/></filter>
+      </defs>
+      <path d="M5,0 Q55,8 105,0 L82,80 Q74,120 70,160 Q66,200 63,240 Q62,255 55,260
+               Q48,255 47,240 Q44,200 40,160 Q36,120 28,80 Z"
+            fill="url(#tGrad)" filter="url(#tBlur)" opacity=".9"/>
+      <path d="M22,0 Q55,5 88,0 L70,80 Q64,118 61,155 Q59,192 57,228 Q56,248 55,260
+               Q54,248 53,228 Q51,192 49,155 Q46,118 40,80 Z"
+            fill="url(#tInner)"/>
+      <line x1="12"  y1="18"  x2="98"  y2="18"  stroke="rgba(160,175,205,0.18)" stroke-width="1.5"/>
+      <line x1="20"  y1="40"  x2="90"  y2="40"  stroke="rgba(155,168,200,0.15)" stroke-width="1.5"/>
+      <line x1="28"  y1="66"  x2="82"  y2="66"  stroke="rgba(148,162,195,0.13)" stroke-width="1.2"/>
+      <line x1="34"  y1="94"  x2="76"  y2="94"  stroke="rgba(140,154,188,0.11)" stroke-width="1"/>
+      <line x1="40"  y1="124" x2="70"  y2="124" stroke="rgba(132,146,182,0.09)" stroke-width="1"/>
+      <line x1="44"  y1="155" x2="66"  y2="155" stroke="rgba(124,138,175,0.07)" stroke-width=".9"/>
+      <ellipse cx="55" cy="258" rx="12" ry="4" fill="rgba(100,110,140,0.18)" filter="url(#tBlur)"/>
+      <ellipse cx="55" cy="254" rx="8"  ry="3" fill="rgba(80,90,120,0.12)"  filter="url(#tBlur)"/>
+      <circle cx="44" cy="248" r="1.5" fill="rgba(120,130,160,0.3)"/>
+      <circle cx="66" cy="252" r="1.2" fill="rgba(110,120,150,0.25)"/>
+      <circle cx="50" cy="256" r="1"   fill="rgba(100,110,140,0.2)"/>
+    </svg>
+  </div>
+
+  <div id="clouds-layer"></div>
+  <canvas id="rain-canvas"></canvas>
   <svg id="lightning-svg"></svg>
+  <canvas id="splash-canvas"></canvas>
 
-  <!-- Your page content -->
-  <div class="hero">
-    <h1>AURYTH</h1>
-    <p>Welcome to the Crows Wake</p>
-    <button class="btn">Enter</button>
+  <div id="ui">
+    <p id="welcome-text">Welcome to</p>
+    <h1 id="title"></h1>
+    <button id="enter-btn">Wake the Crows?</button>
   </div>
 
-  <script>
-    // ── Rain ──────────────────────────────────────────────
-    const canvas = document.getElementById('storm-canvas');
-    const ctx = canvas.getContext('2d');
-    const drops = [];
+<script>
+const PALETTES = [
+  ["rgba(180,100,255,0.18)","rgba(160,80,255,0.55)","#d4aaff","#ffffff"],
+  ["rgba(80,120,255,0.18)","rgba(100,150,255,0.55)","#aac4ff","#ffffff"],
+  ["rgba(200,180,255,0.18)","rgba(170,120,255,0.55)","#e8d5ff","#ffffff"],
+  ["rgba(60,80,200,0.18)","rgba(120,80,255,0.55)","#b8aaff","#e8f4ff"],
+  ["rgba(220,100,255,0.18)","rgba(180,60,255,0.55)","#cc88ff","#f8eeff"],
+];
+const CLOUDS = [
+  { top:"-4%", left:"-8%",  width:"62%", spd:38, dir:[ 1, 1], op:.92, delay:0   },
+  { top: "5%", left:"42%",  width:"55%", spd:52, dir:[-1, 1], op:.78, delay:-12 },
+  { top:"-2%", left:"72%",  width:"48%", spd:30, dir:[ 1,-1], op:.85, delay:-5  },
+  { top:"13%", left:"-5%",  width:"42%", spd:62, dir:[ 1, 1], op:.62, delay:-20 },
+  { top: "8%", left:"56%",  width:"38%", spd:44, dir:[-1,-1], op:.68, delay:-8  },
+  { top: "1%", left:"22%",  width:"35%", spd:70, dir:[ 1, 1], op:.55, delay:-30 },
+];
+const WORD      = ["A","u","r","y","t","h"];
+const CROW_IDXS = [0,3,4,5];
+const FLY_DIR   = [
+  { tx:-260, ty:-220, rot:-45 },
+  { tx: -60, ty:-280, rot:-15 },
+  { tx: 130, ty:-240, rot: 20 },
+  { tx: 300, ty:-180, rot: 40 },
+];
 
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      drops.length = 0;
-      for (let i = 0; i < 220; i++) {
-        drops.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          len: Math.random() * 18 + 10,
-          speed: Math.random() * 10 + 14,
-          opacity: Math.random() * 0.4 + 0.15
-        });
+(function injectKF() {
+  const s = document.createElement("style");
+  s.textContent += CLOUDS.map((cl, i) => `
+    @keyframes cld${i} {
+      0%   { transform: translate(0,0); }
+      20%  { transform: translate(${cl.dir[0]*25}px,${cl.dir[1]*6}px); }
+      45%  { transform: translate(${cl.dir[0]*48}px,${cl.dir[1]*13}px); }
+      70%  { transform: translate(${cl.dir[0]*38}px,${cl.dir[1]*8}px); }
+      85%  { transform: translate(${cl.dir[0]*18}px,${cl.dir[1]*3}px); }
+      100% { transform: translate(0,0); }
+    }`).join("");
+  s.textContent += CROW_IDXS.map((_, slot) => {
+    const fd = FLY_DIR[slot];
+    return `
+    @keyframes crowFly${slot} {
+      0%   { transform:scale(1)   translate(0,0)                                   rotate(0deg);               opacity:1; }
+      15%  { transform:scale(2.2) translate(${fd.tx*.15}px,${fd.ty*.2}px)  rotate(${fd.rot*.4}deg);  opacity:1; }
+      40%  { transform:scale(5)   translate(${fd.tx*.45}px,${fd.ty*.5}px)  rotate(${fd.rot*.7}deg);  opacity:1; }
+      70%  { transform:scale(9)   translate(${fd.tx*.75}px,${fd.ty*.8}px)  rotate(${fd.rot}deg);     opacity:.6; }
+      100% { transform:scale(14)  translate(${fd.tx}px,${fd.ty}px)         rotate(${fd.rot*1.2}deg); opacity:0; }
+    }`;
+  }).join("");
+  document.head.appendChild(s);
+})();
+
+const cloudsLayer = document.getElementById("clouds-layer");
+CLOUDS.forEach((cl, i) => {
+  const div = document.createElement("div");
+  div.style.cssText =
+    `position:absolute;top:${cl.top};left:${cl.left};width:${cl.width};` +
+    `opacity:${cl.op};animation:cld${i} ${cl.spd}s ease-in-out ${cl.delay}s infinite;`;
+  const u = `c${i}`;
+  div.innerHTML = `<svg viewBox="0 0 520 240" style="width:100%;overflow:visible">
+    <defs>
+      <radialGradient id="${u}g1" cx="48%" cy="38%" r="56%">
+        <stop offset="0%"   stop-color="#505a78" stop-opacity=".96"/>
+        <stop offset="55%"  stop-color="#2e3650" stop-opacity=".88"/>
+        <stop offset="100%" stop-color="#18202e" stop-opacity=".68"/>
+      </radialGradient>
+      <radialGradient id="${u}g2" cx="55%" cy="32%" r="58%">
+        <stop offset="0%"   stop-color="#5a6580" stop-opacity=".90"/>
+        <stop offset="60%"  stop-color="#38425e" stop-opacity=".80"/>
+        <stop offset="100%" stop-color="#202840" stop-opacity=".58"/>
+      </radialGradient>
+      <filter id="${u}fa" x="-25%" y="-25%" width="150%" height="150%"><feGaussianBlur stdDeviation="8"/></filter>
+      <filter id="${u}fb" x="-12%" y="-12%" width="124%" height="124%"><feGaussianBlur stdDeviation="3.5"/></filter>
+    </defs>
+    <ellipse cx="260" cy="188" rx="230" ry="42"  fill="#080c18" opacity=".55" filter="url(#${u}fa)"/>
+    <ellipse cx="260" cy="155" rx="210" ry="68"  fill="url(#${u}g1)" filter="url(#${u}fa)"/>
+    <ellipse cx="165" cy="120" rx="125" ry="82"  fill="url(#${u}g1)" filter="url(#${u}fa)"/>
+    <ellipse cx="340" cy="125" rx="108" ry="75"  fill="url(#${u}g2)" filter="url(#${u}fa)"/>
+    <ellipse cx="205" cy="85"  rx="86"  ry="74"  fill="url(#${u}g2)" filter="url(#${u}fb)"/>
+    <ellipse cx="300" cy="76"  rx="74"  ry="66"  fill="url(#${u}g1)" filter="url(#${u}fb)"/>
+    <ellipse cx="148" cy="98"  rx="67"  ry="60"  fill="url(#${u}g2)" filter="url(#${u}fb)"/>
+    <ellipse cx="368" cy="104" rx="62"  ry="56"  fill="url(#${u}g1)" filter="url(#${u}fb)"/>
+    <ellipse cx="260" cy="66"  rx="55"  ry="48"  fill="url(#${u}g2)" filter="url(#${u}fb)"/>
+    <ellipse cx="190" cy="72"  rx="48"  ry="33"  fill="#6878a8" opacity=".32" filter="url(#${u}fb)"/>
+    <ellipse cx="295" cy="62"  rx="40"  ry="27"  fill="#607090" opacity=".28" filter="url(#${u}fb)"/>
+  </svg>`;
+  cloudsLayer.appendChild(div);
+});
+
+function makeCrowSVG(slot, letterIdx) {
+  return `<svg viewBox="0 0 80 64" width="62" height="50"
+      class="crow" data-slot="${slot}" data-letter="${letterIdx}"
+      style="overflow:visible;transform-origin:50% 90%;animation:idleBob${letterIdx%2} ${2.8+letterIdx*0.4}s ease-in-out infinite;">
+    <ellipse cx="44" cy="38" rx="21" ry="13" fill="#060606"/>
+    <path d="M24,40 Q18,30 22,20 Q28,12 38,14 Q48,12 54,20 Q64,24 62,36 Q60,46 50,48 Q38,52 28,46 Z" fill="#111"/>
+    <ellipse cx="24" cy="20" rx="13" ry="12" fill="#111"/>
+    <ellipse cx="33" cy="27" rx="10" ry="9"  fill="#111"/>
+    <path d="M12,17 Q6,20 5,23 Q9,22 14,22 Z" fill="#2a2816"/>
+    <path d="M12,25 Q6,25 5,23 Q9,24 14,24 Z" fill="#1c1a0e"/>
+    <circle cx="20" cy="18" r="4"   fill="#f0f0f0"/>
+    <circle cx="20" cy="18" r="2.2" fill="#0a0a0a"/>
+    <circle cx="18.5" cy="16.5" r=".8" fill="#ffffff"/>
+    <path d="M34,22 Q48,15 66,24 Q56,28 44,30 Q38,30 34,33 Z" fill="#181818"/>
+    <path d="M34,31 Q48,26 64,33 Q54,36 44,37 Q38,37 34,39 Z" fill="#1c1c1c"/>
+    <g class="ruffle-feathers" style="display:none">
+      <path d="M22,36 Q18,30 24,26" stroke="#2a2a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M28,40 Q24,34 30,28" stroke="#2a2a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M44,16 Q42,10 46,8"  stroke="#2a2a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M50,20 Q50,13 54,12" stroke="#2a2a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </g>
+    <path d="M60,35 Q72,30 74,40 L70,36 Q68,42 63,40 L61,44 Q58,38 60,35 Z" fill="#0c0c0c"/>
+    <path d="M36,28 Q50,24 64,29" stroke="#222" stroke-width="1" fill="none" opacity=".5"/>
+    <line x1="36" y1="49" x2="33" y2="57" stroke="#2a2816" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="44" y1="49" x2="41" y2="57" stroke="#2a2816" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M33,57 L26,59 M33,57 L34,62 M33,57 L37,58 M33,57 L30,62"
+          stroke="#2a2816" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+    <path d="M41,57 L34,59 M41,57 L42,62 M41,57 L45,58 M41,57 L38,62"
+          stroke="#2a2816" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+  </svg>`;
+}
+
+const titleEl = document.getElementById("title");
+WORD.forEach((letter, i) => {
+  const span = document.createElement("span");
+  span.className = "letter-wrap";
+  const slot = CROW_IDXS.indexOf(i);
+  if (slot !== -1) {
+    const crowSlotEl = document.createElement("span");
+    crowSlotEl.className = "crow-slot";
+    crowSlotEl.innerHTML = makeCrowSVG(slot, i);
+    span.appendChild(crowSlotEl);
+  }
+  span.appendChild(document.createTextNode(letter));
+  titleEl.appendChild(span);
+});
+
+const rainCanvas   = document.getElementById("rain-canvas");
+const splashCanvas = document.getElementById("splash-canvas");
+const rainCtx      = rainCanvas.getContext("2d");
+const splashCtx    = splashCanvas.getContext("2d");
+let drops = [], splashes = [], drips = [];
+
+function resize() {
+  rainCanvas.width = splashCanvas.width  = window.innerWidth;
+  rainCanvas.height = splashCanvas.height = window.innerHeight;
+  drops = Array.from({length:300}, () => ({
+    x: Math.random() * rainCanvas.width,
+    y: -Math.random() * rainCanvas.height * 0.35,
+    len:   Math.random() * 18 + 10,
+    speed: Math.random() * 12 + 14,
+    opacity: Math.random() * .45 + .15,
+  }));
+}
+resize();
+window.addEventListener("resize", resize);
+
+const btn    = document.getElementById("enter-btn");
+const BORDER = 6;
+
+function getEdge(d) {
+  const r = btn.getBoundingClientRect();
+  const inX = d.x >= r.left && d.x <= r.right;
+  const inY = d.y >= r.top  && d.y <= r.bottom;
+  if (inX && Math.abs(d.y - r.top)    < BORDER) return "top";
+  if (inX && Math.abs(d.y - r.bottom) < BORDER) return "bottom";
+  if (inY && Math.abs(d.x - r.right)  < BORDER) return "right";
+  if (inY && Math.abs(d.x - r.left)   < BORDER) return "left";
+  return null;
+}
+function resetDrop(d) {
+  d.y = -(d.len + Math.random() * rainCanvas.height * 0.08);
+  d.x = Math.random() * rainCanvas.width;
+}
+
+function drawRain() {
+  rainCtx.clearRect(0, 0, rainCanvas.width, rainCanvas.height);
+  rainCtx.strokeStyle = "#a8c8e8";
+  rainCtx.lineWidth   = 1;
+  for (const d of drops) {
+    const fadeIn = Math.min(1, Math.max(0, (d.y + d.len) / (rainCanvas.height * 0.12)));
+    rainCtx.globalAlpha = d.opacity * fadeIn;
+    rainCtx.beginPath();
+    rainCtx.moveTo(d.x, d.y);
+    rainCtx.lineTo(d.x - d.len * .2, d.y + d.len);
+    rainCtx.stroke();
+    d.y += d.speed;
+    d.x -= d.speed * .2;
+    const e = getEdge(d);
+    const r = btn.getBoundingClientRect();
+    if (e === "top")    { splashes.push({x:d.x,y:d.y,r:0,opacity:.9,edge:"top"});   resetDrop(d); continue; }
+    if (e === "right")  { splashes.push({x:d.x,y:d.y,r:0,opacity:.9,edge:"right"}); resetDrop(d); continue; }
+    if (e === "bottom") { drips.push({x:d.x,y:r.bottom,vx:-.4,vy:1.2,size:Math.random()*2.5+2,opacity:.85,trail:0}); resetDrop(d); continue; }
+    if (e === "left")   { drips.push({x:r.left,y:d.y,vx:-2.5,vy:1.8,size:Math.random()*2+1.5,opacity:.8,trail:0}); resetDrop(d); continue; }
+    if (d.y > rainCanvas.height) resetDrop(d);
+    if (d.x < 0) d.x = rainCanvas.width;
+  }
+  rainCtx.globalAlpha = 1;
+  requestAnimationFrame(drawRain);
+}
+
+function drawFX() {
+  splashCtx.clearRect(0, 0, splashCanvas.width, splashCanvas.height);
+  for (let i = splashes.length - 1; i >= 0; i--) {
+    const s = splashes[i];
+    splashCtx.globalAlpha = s.opacity;
+    splashCtx.strokeStyle = "#b0d8f5";
+    splashCtx.lineWidth   = 1.2;
+    if (s.edge === "top") {
+      splashCtx.beginPath();
+      splashCtx.ellipse(s.x, s.y, s.r*2, s.r*.45, 0, 0, Math.PI*2);
+      splashCtx.stroke();
+      for (let j = 0; j < 5; j++) {
+        const a = -Math.PI*.15 + (j/4)*Math.PI*-.7;
+        splashCtx.beginPath();
+        splashCtx.arc(s.x+Math.cos(a)*s.r*1.6, s.y+Math.sin(a)*s.r*1.6, 1.5, 0, Math.PI*2);
+        splashCtx.fillStyle = "#a8d8f0"; splashCtx.fill();
+      }
+    } else {
+      splashCtx.beginPath();
+      splashCtx.ellipse(s.x, s.y, s.r*.45, s.r*2, 0, 0, Math.PI*2);
+      splashCtx.stroke();
+      for (let j = 0; j < 5; j++) {
+        const a = -Math.PI*.35 + (j/4)*Math.PI*.7;
+        splashCtx.beginPath();
+        splashCtx.arc(s.x+Math.cos(a)*s.r*1.6, s.y+Math.sin(a)*s.r*1.6, 1.5, 0, Math.PI*2);
+        splashCtx.fillStyle = "#a8d8f0"; splashCtx.fill();
       }
     }
-    resize();
-    window.addEventListener('resize', resize);
+    s.r += 1.8; s.opacity -= .04;
+    if (s.opacity <= 0) splashes.splice(i, 1);
+  }
+  for (let i = drips.length - 1; i >= 0; i--) {
+    const dr = drips[i];
+    splashCtx.globalAlpha = dr.opacity;
+    const g = splashCtx.createRadialGradient(dr.x, dr.y, 0, dr.x, dr.y, dr.size*2);
+    g.addColorStop(0,  "rgba(160,210,240,.9)");
+    g.addColorStop(.5, "rgba(130,190,225,.6)");
+    g.addColorStop(1,  "rgba(100,170,210,0)");
+    splashCtx.beginPath();
+    splashCtx.arc(dr.x, dr.y, dr.size, 0, Math.PI*2);
+    splashCtx.fillStyle = g; splashCtx.fill();
+    splashCtx.strokeStyle = "rgba(160,210,240,.35)";
+    splashCtx.lineWidth   = dr.size * .7;
+    splashCtx.beginPath();
+    splashCtx.moveTo(dr.x, dr.y);
+    splashCtx.lineTo(
+      dr.x - dr.vx*(dr.size*3+dr.trail*.5)*.4,
+      dr.y - dr.vy*(dr.size*3+dr.trail*.5)*.4
+    );
+    splashCtx.stroke();
+    dr.x += dr.vx; dr.y += dr.vy; dr.vy += .12; dr.trail++; dr.opacity -= .025;
+    if (dr.opacity <= 0) drips.splice(i, 1);
+  }
+  splashCtx.globalAlpha = 1;
+  requestAnimationFrame(drawFX);
+}
 
-    function drawRain() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = '#a8c8e8';
-      ctx.lineWidth = 1;
-      for (const d of drops) {
-        ctx.globalAlpha = d.opacity;
-        ctx.beginPath();
-        ctx.moveTo(d.x, d.y);
-        ctx.lineTo(d.x - d.len * 0.2, d.y + d.len);
-        ctx.stroke();
-        d.y += d.speed;
-        d.x -= d.speed * 0.2;
-        if (d.y > canvas.height) { d.y = -d.len; d.x = Math.random() * canvas.width; }
-        if (d.x < 0) d.x = canvas.width;
-      }
-      ctx.globalAlpha = 1;
-      requestAnimationFrame(drawRain);
+drawRain();
+drawFX();
+
+const lightSVG = document.getElementById("lightning-svg");
+const flashEl  = document.getElementById("flash");
+
+function genSegs(endY, spread) {
+  spread = spread || 90;
+  const s = []; let cy = 0;
+  while (cy < endY) {
+    const l = Math.random()*40+15;
+    const seg = { dx:(Math.random()-.5)*spread, dy:Math.min(l, endY-cy) };
+    s.push(seg); cy += seg.dy;
+  }
+  return s;
+}
+function pathStr(sx, sy, segs) {
+  let cx=sx, cy=sy, d=`M ${cx} ${cy}`;
+  for (const s of segs) { cx+=s.dx; cy+=s.dy; d+=` L ${cx} ${cy}`; }
+  return d;
+}
+function genForks(main, sx) {
+  const f=[]; let cx=sx, cy=0;
+  for (const seg of main) {
+    cx+=seg.dx; cy+=seg.dy;
+    if (Math.random()<.38 && cy>30) {
+      f.push({sx:cx,sy:cy,segs:genSegs((Math.random()*.35+.1)*window.innerHeight*.65, 60)});
+      if (Math.random()<.4)
+        f.push({sx:cx+(Math.random()-.5)*20, sy:cy+15, segs:genSegs((Math.random()*.2+.08)*window.innerHeight*.65, 40)});
     }
-    drawRain();
+  }
+  return f;
+}
+function mkPath(d, stroke, sw, opacity) {
+  const p = document.createElementNS("http://www.w3.org/2000/svg","path");
+  p.setAttribute("d", d);
+  p.setAttribute("stroke", stroke);
+  p.setAttribute("stroke-width", sw);
+  p.setAttribute("fill", "none");
+  p.setAttribute("stroke-linecap", "round");
+  p.setAttribute("stroke-linejoin", "round");
+  if (opacity != null && opacity < 1) p.setAttribute("opacity", opacity);
+  return p;
+}
 
-    // ── Lightning ─────────────────────────────────────────
-    const svg = document.getElementById('lightning-svg');
-    const flash = document.getElementById('flash');
+function strike() {
+  const palette = PALETTES[Math.floor(Math.random()*PALETTES.length)];
+  const sy = (Math.random()*.10+.18)*window.innerHeight;
+  const sx = (Math.random()*75+10)/100*window.innerWidth;
+  const main  = genSegs((window.innerHeight-sy)*.7, 90);
+  const forks = genForks(main, sx);
+  const w     = Math.random()*2+1.5;
+  const [glow,core,tip,white] = palette;
+  const md = pathStr(sx, sy, main);
+  const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+  g.appendChild(mkPath(md, glow,  w*10,  null));
+  g.appendChild(mkPath(md, core,  w*4,   null));
+  g.appendChild(mkPath(md, tip,   w*1.8, null));
+  g.appendChild(mkPath(md, white, w*.7,  null));
+  for (const fk of forks) {
+    const fd = pathStr(fk.sx, fk.sy, fk.segs);
+    const fg = document.createElementNS("http://www.w3.org/2000/svg","g");
+    fg.appendChild(mkPath(fd, core,  w*3,   .7));
+    fg.appendChild(mkPath(fd, tip,   w*1.4, .85));
+    fg.appendChild(mkPath(fd, white, w*.5,  .9));
+    g.appendChild(fg);
+  }
+  lightSVG.appendChild(g);
+  const fl = Math.random()*.12+.08;
+  flashEl.style.opacity = fl;
+  setTimeout(()=>{ flashEl.style.opacity = fl*.4;  }, 60);
+  setTimeout(()=>{ flashEl.style.opacity = fl*.75; }, 130);
+  setTimeout(()=>{ flashEl.style.opacity = 0;      }, 210);
+  setTimeout(()=>{ if (g.parentNode) lightSVG.removeChild(g); }, 440);
+}
 
-    function generateBolt(startX, endY) {
-      let cx = startX, cy = 0, d = `M ${cx} ${cy}`;
-      while (cy < endY) {
-        const seg = Math.random() * 40 + 20;
-        cx += (Math.random() - 0.5) * 80;
-        cy += Math.min(seg, endY - cy);
-        d += ` L ${cx} ${cy}`;
-      }
-      return d;
-    }
+function schedLightning() {
+  setTimeout(() => {
+    strike();
+    if (Math.random() > .55) setTimeout(strike, 200);
+    if (Math.random() > .80) setTimeout(strike, 380);
+    schedLightning();
+  }, Math.random()*5000+2500);
+}
+schedLightning();
 
-    function strike() {
-      const x = (Math.random() * 80 + 10) / 100 * window.innerWidth;
-      const d = generateBolt(x, window.innerHeight * 0.65);
-      const w = Math.random() * 2 + 1.5;
+function schedRuffle(crowEl) {
+  setTimeout(() => {
+    const rf = crowEl.querySelector(".ruffle-feathers");
+    if (rf) rf.style.display = "block";
+    const li = parseInt(crowEl.dataset.letter);
+    crowEl.style.animation       = "ruffle 0.7s ease-in-out";
+    crowEl.style.transformOrigin = "50% 90%";
+    setTimeout(() => {
+      if (rf) rf.style.display = "none";
+      crowEl.style.animation = `idleBob${li%2} ${2.8+li*0.4}s ease-in-out infinite`;
+      schedRuffle(crowEl);
+    }, 700);
+  }, Math.random()*6000+3000);
+}
+document.querySelectorAll(".crow").forEach(el => schedRuffle(el));
 
-      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      for (const [stroke, width] of [
-        ['rgba(150,200,255,0.25)', w * 6],
-        ['rgba(180,220,255,0.6)',  w * 2.5],
-        ['#e8f4ff',                w]
-      ]) {
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', d);
-        path.setAttribute('stroke', stroke);
-        path.setAttribute('stroke-width', width);
-        path.setAttribute('fill', 'none');
-        path.setAttribute('stroke-linecap', 'round');
-        g.appendChild(path);
-      }
-      svg.appendChild(g);
-
-      flash.style.opacity = 0.18;
-      setTimeout(() => flash.style.opacity = 0.07, 60);
-      setTimeout(() => flash.style.opacity = 0.14, 120);
-      setTimeout(() => flash.style.opacity = 0, 180);
-      setTimeout(() => svg.removeChild(g), 350);
-    }
-
-    function scheduleStrike() {
-      setTimeout(() => {
-        strike();
-        if (Math.random() > 0.5) setTimeout(strike, 150);
-        scheduleStrike();
-      }, Math.random() * 3500 + 1200);
-    }
-    scheduleStrike();
-  </script>
+let isFlying = false;
+btn.addEventListener("click", () => {
+  if (isFlying) return;
+  isFlying = true;
+  btn.style.background = "rgba(120,60,200,.4)";
+  document.querySelectorAll(".crow").forEach(el => {
+    const slot = parseInt(el.dataset.slot);
+    el.style.animation       = `crowFly${slot} 1.4s cubic-bezier(.2,.6,.4,1) forwards`;
+    el.style.transformOrigin = "50% 90%";
+  });
+  setTimeout(() => {
+    isFlying = false;
+    btn.style.background = "rgba(80,50,120,.15)";
+    document.querySelectorAll(".crow").forEach(el => {
+      const li = parseInt(el.dataset.letter);
+      el.style.animation       = `idleBob${li%2} ${2.8+li*0.4}s ease-in-out infinite`;
+      el.style.transformOrigin = "50% 90%";
+    });
+  }, 2000);
+});
+</script>
 </body>
 </html>
